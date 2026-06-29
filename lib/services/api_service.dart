@@ -1,10 +1,13 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, kReleaseMode;
 
 class ApiService {
   static String get baseUrl {
+    if (kReleaseMode) {
+      return 'https://agfeeder.vercel.app/api';
+    }
     if (kIsWeb) {
       // Flutter Web — always use 127.0.0.1 (avoids IPv6 ::1 routing issues)
       return 'http://127.0.0.1:5000/api';
