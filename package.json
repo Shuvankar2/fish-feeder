@@ -2,6 +2,9 @@
   "name": "aquaglass-root",
   "version": "1.0.0",
   "private": true,
+  "scripts": {
+    "build": "bash vercel-build.sh"
+  },
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
