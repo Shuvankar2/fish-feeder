@@ -12,4 +12,4 @@ const feedLogSchema = new mongoose.Schema({
 
 feedLogSchema.index({ device_id: 1, triggered_at: -1 });
 
-module.exports = mongoose.model("FeedLog", feedLogSchema);
+module.exports = mongoose.models.FeedLog || mongoose.model("FeedLog", feedLogSchema);

@@ -22,5 +22,4 @@ const deviceSchema = new mongoose.Schema({
 // device_id and serial_number indexes created automatically via unique:true above
 deviceSchema.index({ owner_uid: 1 });
 
-module.exports = mongoose.model("Device", deviceSchema);
-
+module.exports = mongoose.models.Device || mongoose.model("Device", deviceSchema);

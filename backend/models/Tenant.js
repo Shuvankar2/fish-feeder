@@ -6,4 +6,4 @@ const tenantSchema = new mongoose.Schema({
   created_at:   { type: Date, default: Date.now },
 });
 
-module.exports = mongoose.model("Tenant", tenantSchema);
+module.exports = mongoose.models.Tenant || mongoose.model("Tenant", tenantSchema);

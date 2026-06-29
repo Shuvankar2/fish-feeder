@@ -10,7 +10,7 @@ const pairingTokenSchema = new mongoose.Schema({
   created_at:    { type: Date, default: Date.now },
 });
 
-// TTL index — MongoDB auto-deletes expired tokens
+// TTL index â€” MongoDB auto-deletes expired tokens
 pairingTokenSchema.index({ expires_at: 1 }, { expireAfterSeconds: 0 });
 
-module.exports = mongoose.model("PairingToken", pairingTokenSchema);
+module.exports = mongoose.models.PairingToken || mongoose.model("PairingToken", pairingTokenSchema);

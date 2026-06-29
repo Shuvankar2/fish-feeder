@@ -10,8 +10,8 @@ const otpSchema = new mongoose.Schema({
   created_at: { type: Date, default: Date.now },
 });
 
-// TTL index — MongoDB auto-deletes expired OTPs
+// TTL index â€” MongoDB auto-deletes expired OTPs
 otpSchema.index({ expires_at: 1 }, { expireAfterSeconds: 0 });
 otpSchema.index({ email: 1, type: 1 });
 
-module.exports = mongoose.model("OtpCode", otpSchema);
+module.exports = mongoose.models.OtpCode || mongoose.model("OtpCode", otpSchema);

@@ -9,4 +9,4 @@ const firmwareSchema = new mongoose.Schema({
   created_at:   { type: Date, default: Date.now },
 });
 
-module.exports = mongoose.model("Firmware", firmwareSchema);
+module.exports = mongoose.models.Firmware || mongoose.model("Firmware", firmwareSchema);

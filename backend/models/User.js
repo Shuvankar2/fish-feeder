@@ -17,5 +17,4 @@ const userSchema = new mongoose.Schema({
 
 // Indexes on email and uid are created automatically via unique:true above
 
-module.exports = mongoose.model("User", userSchema);
-
+module.exports = mongoose.models.User || mongoose.model("User", userSchema);

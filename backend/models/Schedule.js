@@ -14,4 +14,4 @@ const scheduleSchema = new mongoose.Schema({
 
 scheduleSchema.index({ device_id: 1 });
 
-module.exports = mongoose.model("Schedule", scheduleSchema);
+module.exports = mongoose.models.Schedule || mongoose.model("Schedule", scheduleSchema);

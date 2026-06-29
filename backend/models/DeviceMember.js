@@ -12,4 +12,4 @@ const deviceMemberSchema = new mongoose.Schema({
 deviceMemberSchema.index({ device_id: 1, user_uid: 1 }, { unique: true });
 deviceMemberSchema.index({ user_uid: 1 });
 
-module.exports = mongoose.model("DeviceMember", deviceMemberSchema);
+module.exports = mongoose.models.DeviceMember || mongoose.model("DeviceMember", deviceMemberSchema);

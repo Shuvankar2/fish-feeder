@@ -12,4 +12,4 @@ const adminLogSchema = new mongoose.Schema({
 
 adminLogSchema.index({ admin_uid: 1, created_at: -1 });
 
-module.exports = mongoose.model("AdminLog", adminLogSchema);
+module.exports = mongoose.models.AdminLog || mongoose.model("AdminLog", adminLogSchema);
