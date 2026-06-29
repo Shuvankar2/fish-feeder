@@ -9,8 +9,15 @@ const connectDB = require("./config/database");
 
 const app = express();
 
-// Connect DB (serverless-safe - reuses existing connection)
-connectDB();
+// Middleware to establish DB connection lazily (prevents cold-start blocks on Serverless platforms)
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+  } catch (err) {
+    console.error("Database connection failed during request:", err);
+  }
+  next();
+});
 
 // Middleware
 app.use(cors({ origin: "*" }));
