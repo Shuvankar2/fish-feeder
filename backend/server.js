@@ -1,4 +1,4 @@
-﻿require("dotenv").config();
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const connectDB = require("./config/database");
@@ -38,10 +38,17 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-// CHANGE THIS LINE to include "0.0.0.0"
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`\n🚀 AquaGlass Backend running on http://0.0.0.0:${PORT}`);
-  console.log(`📡 Health: http://localhost:${PORT}/health`);
-  console.log(`🔑 Auth:   http://localhost:${PORT}/api/auth`);
-  console.log(`📦 Env:    ${process.env.NODE_ENV}\n`);
-});
+
+// Vercel handles the port and server automatically.
+// We only call app.listen if we are NOT running on Vercel.
+if (!process.env.VERCEL) {
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`\n🚀 AquaGlass Backend running on http://0.0.0.0:${PORT}`);
+    console.log(`📡 Health: http://localhost:${PORT}/health`);
+    console.log(`🔑 Auth:   http://localhost:${PORT}/api/auth`);
+    console.log(`📦 Env:    ${process.env.NODE_ENV}\n`);
+  });
+}
+
+// Export the Express API for Vercel Serverless Functions
+module.exports = app;
