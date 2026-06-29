@@ -1,12 +1,20 @@
-﻿const nodemailer = require("nodemailer");
+const nodemailer = require("nodemailer");
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+// Create transporter lazily (on first use) to avoid crash during cold start
+// if env vars haven't been injected yet
+let _transporter = null;
+const getTransporter = () => {
+  if (!_transporter) {
+    _transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+  }
+  return _transporter;
+};
 
 const sendOTP = async (to, code, type) => {
   const subject = type === "signup"
@@ -17,7 +25,7 @@ const sendOTP = async (to, code, type) => {
     ? "complete your registration"
     : "reset your password";
 
-  await transporter.sendMail({
+  await getTransporter().sendMail({
     from: `"AquaGlass" <${process.env.EMAIL_USER}>`,
     to,
     subject,
@@ -36,7 +44,7 @@ const sendOTP = async (to, code, type) => {
 };
 
 const sendWelcome = async (to, name) => {
-  await transporter.sendMail({
+  await getTransporter().sendMail({
     from: `"AquaGlass" <${process.env.EMAIL_USER}>`,
     to,
     subject: "Welcome to AquaGlass!",

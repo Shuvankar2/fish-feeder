@@ -1,11 +1,15 @@
-require("dotenv").config();
+// Load .env only in non-production (local dev). On Vercel, env vars are injected automatically.
+if (process.env.NODE_ENV !== "production") {
+  require("dotenv").config();
+}
+
 const express = require("express");
 const cors = require("cors");
 const connectDB = require("./config/database");
 
 const app = express();
 
-// Connect DB
+// Connect DB (serverless-safe - reuses existing connection)
 connectDB();
 
 // Middleware
@@ -26,12 +30,12 @@ app.use("/api/schedules", require("./routes/schedule.routes"));
 app.use("/api/feedlogs", require("./routes/feedlog.routes"));
 app.use("/api/admin", require("./routes/admin.routes"));
 
-// 404
+// 404 handler
 app.use((req, res) => {
   res.status(404).json({ success: false, message: `Route ${req.method} ${req.path} not found` });
 });
 
-// Error handler
+// Global error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ success: false, message: "Internal server error" });
@@ -39,8 +43,7 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 
-// Vercel handles the port and server automatically.
-// We only call app.listen if we are NOT running on Vercel.
+// Only call app.listen when running locally (not on Vercel)
 if (!process.env.VERCEL) {
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`\n🚀 AquaGlass Backend running on http://0.0.0.0:${PORT}`);
@@ -50,5 +53,5 @@ if (!process.env.VERCEL) {
   });
 }
 
-// Export the Express API for Vercel Serverless Functions
+// Export the Express app as a Vercel Serverless Function
 module.exports = app;
