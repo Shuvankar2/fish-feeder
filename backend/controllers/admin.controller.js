@@ -1,4 +1,4 @@
-﻿const { v4: uuidv4 } = require("uuid");
+const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const Tenant = require("../models/Tenant");
@@ -115,7 +115,7 @@ const createDevice = async (req, res) => {
     });
 
     // Generate 24h pairing token
-    const token = uuidv4().replace(/-/g, "");
+    const token = crypto.randomUUID().replace(/-/g, "");
     const expires_at = new Date(Date.now() + 24 * 60 * 60 * 1000);
     await PairingToken.create({ device_id, serial_number, token, expires_at, created_by: req.user.uid });
 

@@ -1,5 +1,5 @@
-﻿const bcrypt = require("bcryptjs");
-const { v4: uuidv4 } = require("uuid");
+const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
 const User = require("../models/User");
 const OtpCode = require("../models/OtpCode");
 const { signToken } = require("../utils/jwt");
@@ -78,7 +78,7 @@ const register = async (req, res) => {
     if (existing) return res.status(409).json({ success: false, message: "Email already registered" });
 
     const password_hash = await bcrypt.hash(password, 12);
-    const uid = "usr_" + uuidv4().replace(/-/g, "").substring(0, 16);
+    const uid = "usr_" + crypto.randomUUID().replace(/-/g, "").substring(0, 16);
 
     const user = await User.create({
       uid, name, email: email.toLowerCase(), password_hash,
@@ -135,7 +135,7 @@ const socialLogin = async (req, res) => {
         await user.save();
       }
     } else {
-      const uid = "usr_" + uuidv4().replace(/-/g, "").substring(0, 16);
+      const uid = "usr_" + crypto.randomUUID().replace(/-/g, "").substring(0, 16);
       user = await User.create({
         uid, name: name || email.split("@")[0],
         email: email.toLowerCase(), password_hash: null,
