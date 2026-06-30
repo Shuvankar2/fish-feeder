@@ -1736,8 +1736,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                         const SizedBox(width: 8),
                         GestureDetector(
                           onTap: () async {
-                            await AdminService.revokeDeleteFirmware(fw.version);
-                            _loadData();
+                            final res = await AdminService.revokeDeleteFirmware(fw.version);
+                            if (res['success'] == true) {
+                              _showSnackBar('Revoked deletion for ${fw.version}');
+                              setState(() {
+                                final idx = _firmwares.indexWhere((f) => f.version == fw.version);
+                                if (idx != -1) {
+                                  _firmwares[idx] = FirmwareModel(
+                                    version: fw.version, releaseDate: fw.releaseDate,
+                                    changelog: fw.changelog, sizeKB: fw.sizeKB, tag: fw.tag,
+                                    deleteRequestedAt: null
+                                  );
+                                }
+                              });
+                            }
                           },
                           child: _pill('Revoke', Colors.orangeAccent),
                         )
@@ -1745,16 +1757,43 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                     }),
                   ] else ...[
                     GestureDetector(
-                      onTap: () async {
-                        try {
-                          final res = await AdminService.requestDeleteFirmware(fw.version);
-                          if (res['success'] == true) {
-                            _showSnackBar('Deletion requested for ${fw.version}');
-                            _loadData();
-                          } else {
-                            _showSnackBar(res['message'] ?? 'Request failed', isError: true);
-                          }
-                        } catch (_) { _showSnackBar('Connection failed', isError: true); }
+                      onTap: () {
+                        showDialog(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            backgroundColor: const Color(0xFF0D2018),
+                            title: Text('Request Deletion', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+                            content: Text('Are you sure you want to request deletion of ${fw.version}?\nThis will initiate a 24-hour buffer before permanent deletion.', style: GoogleFonts.outfit(color: Colors.white70)),
+                            actions: [
+                              TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: GoogleFonts.outfit(color: Colors.white38))),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
+                                onPressed: () async {
+                                  Navigator.pop(ctx);
+                                  try {
+                                    final res = await AdminService.requestDeleteFirmware(fw.version);
+                                    if (res['success'] == true) {
+                                      _showSnackBar('Deletion requested for ${fw.version}');
+                                      setState(() {
+                                        final idx = _firmwares.indexWhere((f) => f.version == fw.version);
+                                        if (idx != -1) {
+                                          _firmwares[idx] = FirmwareModel(
+                                            version: fw.version, releaseDate: fw.releaseDate,
+                                            changelog: fw.changelog, sizeKB: fw.sizeKB, tag: fw.tag,
+                                            deleteRequestedAt: DateTime.now()
+                                          );
+                                        }
+                                      });
+                                    } else {
+                                      _showSnackBar(res['message'] ?? 'Request failed', isError: true);
+                                    }
+                                  } catch (_) { _showSnackBar('Connection failed', isError: true); }
+                                },
+                                child: Text('Confirm', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                              )
+                            ]
+                          )
+                        );
                       },
                       child: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 18),
                     ),
@@ -2652,7 +2691,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                   );
                   if (res['success'] == true) {
                     _showSnackBar('Firmware ${version} added successfully! 🚀');
-                    _loadData();
+                    setState(() {
+                      _firmwares.insert(0, FirmwareModel(
+                        version: version,
+                        releaseDate: DateTime.now(),
+                        changelog: changelog,
+                        sizeKB: sizeKb.toString(),
+                        tag: selectedTag,
+                      ));
+                      _firmwares.sort((a, b) => b.version.compareTo(a.version));
+                    });
                   } else {
                     _showSnackBar(res['message'] ?? 'Failed to add firmware', isError: true);
                   }
@@ -2758,7 +2806,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                   );
                   if (res['success'] == true) {
                     _showSnackBar('Firmware ${fw.version} updated successfully! 🚀');
-                    _loadData();
+                    setState(() {
+                      final idx = _firmwares.indexWhere((f) => f.version == fw.version);
+                      if (idx != -1) {
+                        _firmwares[idx] = FirmwareModel(
+                          version: fw.version,
+                          releaseDate: fw.releaseDate,
+                          changelog: changelog,
+                          sizeKB: fw.sizeKB,
+                          tag: selectedTag,
+                          deleteRequestedAt: fw.deleteRequestedAt,
+                        );
+                      }
+                    });
                   } else {
                     _showSnackBar(res['message'] ?? 'Failed to update firmware', isError: true);
                   }
