@@ -1249,7 +1249,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         _infoChip('Feeds Today', '${device.feedsToday}'),
         _infoChip('Failed', '${device.failedFeeds}', alert: device.failedFeeds > 0),
         _infoChip('Last Seen', _timeAgo(device.lastSeen)),
-        _infoChip('Owner', device.ownerEmail.split('@').first),
+        _infoChip('Owner', device.ownerEmail),
       ]),
       const SizedBox(height: 14),
 
