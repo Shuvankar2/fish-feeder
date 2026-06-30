@@ -267,6 +267,22 @@ const revokeDeleteTenant = async (req, res) => {
   }
 };
 
+const updateTenant = async (req, res) => {
+  try {
+    const { name } = req.params;
+    const { display_name } = req.body;
+    if (!display_name) {
+      return res.status(400).json({ success: false, message: "display_name is required" });
+    }
+    const tenant = await Tenant.findOneAndUpdate({ name }, { display_name }, { new: true });
+    if (!tenant) return res.status(404).json({ success: false, message: "Tenant not found" });
+    await logAction(req.user.uid, "update_tenant", "system", name, { display_name }, req.ip);
+    res.json({ success: true, tenant });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Tenant update failed" });
+  }
+};
+
 const deleteTenant = async (req, res) => {
   try {
     const { name } = req.params;
@@ -347,6 +363,6 @@ const deleteFirmware = async (req, res) => {
 };
 
 module.exports = {
-  listTenants, createTenant, requestDeleteTenant, revokeDeleteTenant, deleteTenant,
+  listTenants, createTenant, updateTenant, requestDeleteTenant, revokeDeleteTenant, deleteTenant,
   listFirmwares, createFirmware, deleteFirmware,
   getStats, listUsers, updateUser, deleteUser, listAllDevices, createDevice, updateDeviceAdmin, deleteDevice, transferOwnership, getAdminLogs, getAllFeedLogs };

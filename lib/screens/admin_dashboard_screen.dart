@@ -561,12 +561,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                   height: 100,
                   child: CustomPaint(
                     painter: _RingPainter(
-                      progress: _statsFade.value * (onlineDevices / totalDevices),
+                      progress: _statsFade.value * (totalDevices > 0 ? (onlineDevices / totalDevices) : 0.0),
                       color: const Color(0xFF00FF87),
                     ),
                     child: Center(
                       child: Text(
-                        '${((onlineDevices / totalDevices) * 100).round()}%',
+                        '${totalDevices > 0 ? ((onlineDevices / totalDevices) * 100).round() : 0}%',
                         style: GoogleFonts.outfit(
                             color: const Color(0xFF00FF87),
                             fontWeight: FontWeight.bold,
@@ -925,6 +925,57 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           ]),
         ),
         Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [const Color(0xFF00FF87).withOpacity(0.12), Colors.white.withOpacity(0.02)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFF00FF87).withOpacity(0.25)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00FF87).withOpacity(0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.router_rounded, color: Color(0xFF00FF87), size: 24),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Device Connection & Provisioning',
+                          style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                      const SizedBox(height: 2),
+                      Text('Connect to feeder hardware to monitor parameters or provision under a tenant.',
+                          style: GoogleFonts.outfit(color: Colors.white54, fontSize: 10)),
+                    ],
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () => _showProvisionDeviceDialog(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF00FF87),
+                    foregroundColor: Colors.black,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: Text('Connect Device', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 11)),
+                ),
+              ],
+            ),
+          ),
+        ),
+        Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           child: Row(children: [
             Text('${filteredTenants.length} tenants',
@@ -971,6 +1022,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                 Icon(Icons.business_rounded, color: const Color(0xFF00FF87), size: 24),
                                 Row(
                                   children: [
+                                    GestureDetector(
+                                      onTap: () => _showEditTenantDialog(t),
+                                      child: Icon(Icons.edit_outlined, color: const Color(0xFF00FF87).withOpacity(0.8), size: 18),
+                                    ),
+                                    const SizedBox(width: 8),
                                     GestureDetector(
                                       onTap: () async {
                                         try {
@@ -1135,7 +1191,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                       fontSize: 13),
                   overflow: TextOverflow.ellipsis),
             ),
-            const SizedBox(width: 6),
+            GestureDetector(
+              onTap: () => _showEditDeviceNameDialog(device),
+              child: Icon(Icons.edit_outlined, color: Colors.white54, size: 16),
+            ),
+            const SizedBox(width: 8),
             _pill(device.isOnline ? 'Online' : 'Offline', onColor),
           ]),
           subtitle: Padding(
@@ -2400,6 +2460,114 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             child: Text('Create', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditTenantDialog(Map<String, dynamic> tenant) {
+    final dispCtrl = TextEditingController(text: tenant['display_name']);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF0D2018),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Edit Tenant',
+            style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Tenant: ${tenant['name']}', style: GoogleFonts.outfit(color: Colors.white54, fontSize: 13)),
+            const SizedBox(height: 12),
+            _dialogField(dispCtrl, 'Display Name', Icons.title_rounded),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('Cancel', style: GoogleFonts.outfit(color: Colors.white38))),
+          ElevatedButton(
+            onPressed: () async {
+              final disp = dispCtrl.text.trim();
+              if (disp.isEmpty) {
+                _showSnackBar('Display Name is required', isError: true);
+                return;
+              }
+              Navigator.pop(ctx);
+
+              try {
+                final res = await AdminService.updateTenant(tenant['name'], disp);
+                if (res['success'] == true) {
+                  _showSnackBar('Tenant updated successfully! 🏢');
+                  _loadData();
+                } else {
+                  _showSnackBar(res['message'] ?? 'Failed to update tenant', isError: true);
+                }
+              } catch (_) {
+                _showSnackBar('Connection failed', isError: true);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF00FF87),
+              foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: Text('Save', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditDeviceNameDialog(AdminDeviceModel device) {
+    final nameCtrl = TextEditingController(text: device.name.split('â€”').last.trim());
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF0D2018),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Edit Device Name',
+            style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _dialogField(nameCtrl, 'Device Name', Icons.label_rounded),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('Cancel', style: GoogleFonts.outfit(color: Colors.white38))),
+          ElevatedButton(
+            onPressed: () async {
+              final newName = nameCtrl.text.trim();
+              if (newName.isEmpty) {
+                _showSnackBar('Device name is required', isError: true);
+                return;
+              }
+              Navigator.pop(ctx);
+
+              try {
+                final res = await AdminService.updateDevice(int.parse(device.id), {'name': newName});
+                if (res['success'] == true) {
+                  _showSnackBar('Device renamed successfully! 🏷️');
+                  _loadData();
+                } else {
+                  _showSnackBar(res['message'] ?? 'Failed to rename device', isError: true);
+                }
+              } catch (_) {
+                _showSnackBar('Connection failed', isError: true);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF00FF87),
+              foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: Text('Save', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
