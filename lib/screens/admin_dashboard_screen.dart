@@ -5,11 +5,13 @@ import 'package:google_fonts/google_fonts.dart';
 import '../models/admin_models.dart';
 import '../services/admin_service.dart';
 import '../services/device_service.dart';
+import '../services/serial_service.dart';
+import '../services/esp_wifi_service.dart';
 import 'login_screen.dart';
 import '../services/download_helper.dart'
     if (dart.library.js) '../services/download_helper_web.dart';
 import 'dart:ui' as ui;
-import 'dart:convert' show base64Encode;
+import 'dart:convert';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
@@ -2537,17 +2539,50 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                     ElevatedButton.icon(
                       onPressed: () async {
                         set(() => isConnectingLocal = true);
-                        await Future.delayed(const Duration(seconds: 2));
-                        final randomMac = '24:0A:C4:8B:${10 + math.Random().nextInt(80)}:${10 + math.Random().nextInt(80)}';
-                        final timestamp = DateTime.now().millisecondsSinceEpoch.toString().substring(6);
-                        final serial = 'AQ${timestamp}';
-                        final secret = 'aq_sec_${math.Random().nextInt(100000)}';
-                        set(() {
-                          isConnectingLocal = false;
-                          macAddress = randomMac;
-                          autoSerial = serial;
-                          autoSecret = secret;
-                        });
+                        try {
+                          String? fetchedMac;
+                          String? fetchedSerial;
+                          
+                          if (connectionMode == 'Wi-Fi AP Mode') {
+                            final info = await EspWifiService.getDeviceInfo();
+                            fetchedMac = info['macAddress'];
+                            fetchedSerial = info['serialNumber'];
+                          } else {
+                            final rawJson = await SerialService.getESPParameters();
+                            final info = jsonDecode(rawJson);
+                            fetchedMac = info['macAddress'];
+                            fetchedSerial = info['serialNumber'];
+                          }
+                          
+                          if (fetchedMac == null || fetchedSerial == null) {
+                            throw Exception('Incomplete device information received.');
+                          }
+                          
+                          // The device secret is never exposed per spec,
+                          // we generate a placeholder for the UI to prevent null errors.
+                          // During claim flow, ESP authenticates directly.
+                          final secret = 'aq_sec_${math.Random().nextInt(100000)}';
+
+                          set(() {
+                            macAddress = fetchedMac!;
+                            autoSerial = fetchedSerial!;
+                            autoSecret = secret;
+                          });
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(e.toString(), style: const TextStyle(color: Colors.white)), 
+                                backgroundColor: Colors.red.shade800,
+                                duration: const Duration(seconds: 5),
+                              ),
+                            );
+                          }
+                        } finally {
+                          set(() {
+                            isConnectingLocal = false;
+                          });
+                        }
                       },
                       icon: const Icon(Icons.wifi_find_rounded),
                       label: Text('Scan & Capture parameters', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
