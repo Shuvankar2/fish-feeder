@@ -8,6 +8,7 @@ import '../services/device_service.dart';
 import '../services/serial_service.dart';
 import '../services/esp_wifi_service.dart';
 import 'login_screen.dart';
+import 'profile_screen.dart';
 import '../services/download_helper.dart'
     if (dart.library.js) '../services/download_helper_web.dart';
 import 'dart:ui' as ui;
