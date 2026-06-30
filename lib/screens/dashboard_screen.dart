@@ -18,7 +18,7 @@ class DeviceModel {
   final String macAddress;
   bool isOnline;
   String connectionMode; // 'Local' or 'Cloud'
-  int foodLevelPercent;
+  int? foodLevelPercent;
   String firmware;
   DateTime lastSeen;
   String localIP;
@@ -30,7 +30,7 @@ class DeviceModel {
     required this.macAddress,
     this.isOnline = true,
     this.connectionMode = 'Cloud',
-    this.foodLevelPercent = 85,
+    this.foodLevelPercent,
     this.firmware = 'v1.0.4',
     required this.lastSeen,
     required this.localIP,
@@ -141,7 +141,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             macAddress: d['ip_address'] ?? '00:00:00:00:00:00',
             isOnline: isOnline,
             connectionMode: 'Cloud',
-            foodLevelPercent: 85,
+            foodLevelPercent: null,
             firmware: d['firmware_version'] ?? 'v1.0.0',
             lastSeen: DateTime.tryParse(d['last_seen'] ?? '') ?? DateTime.now(),
             localIP: d['ip_address'] ?? '192.168.1.55',
@@ -1048,18 +1048,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: _buildStatCard(
                   icon: Icons.inventory_2_rounded,
                   label: 'Remaining Food',
-                  value: '$foodPercent%',
-                  valueColor: foodPercent <= 20
-                      ? Colors.redAccent
-                      : foodPercent <= 50
-                          ? Colors.orangeAccent
-                          : const Color(0xFF00FF87),
-                  progressValue: foodPercent / 100.0,
-                  progressColor: foodPercent <= 20
-                      ? Colors.redAccent
-                      : foodPercent <= 50
-                          ? Colors.orangeAccent
-                          : const Color(0xFF00FF87),
+                  value: foodPercent != null ? '$foodPercent%' : 'NA',
+                  valueColor: foodPercent == null 
+                      ? Colors.white54
+                      : foodPercent <= 20
+                          ? Colors.redAccent
+                          : foodPercent <= 50
+                              ? Colors.orangeAccent
+                              : const Color(0xFF00FF87),
+                  progressValue: foodPercent != null ? foodPercent / 100.0 : 0.0,
+                  progressColor: foodPercent == null
+                      ? Colors.white24
+                      : foodPercent <= 20
+                          ? Colors.redAccent
+                          : foodPercent <= 50
+                              ? Colors.orangeAccent
+                              : const Color(0xFF00FF87),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1434,7 +1438,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           macAddress: 'EE:FF:12:34:56:${DateTime.now().second.toString().padLeft(2, '0')}',
                           isOnline: true,
                           connectionMode: selectedMode,
-                          foodLevelPercent: 100,
+                          foodLevelPercent: null,
                           firmware: 'v1.0.0',
                           lastSeen: DateTime.now(),
                           localIP: selectedMode == 'Local' ? '192.168.4.1' : '192.168.1.150',
@@ -3004,7 +3008,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   macAddress: 'F0:08:D1:5A:${DateTime.now().second.toString().padLeft(2, '0')}:E3',
                   lastSeen: DateTime.now(),
                   localIP: '192.168.1.188',
-                  foodLevelPercent: 100,
+                  foodLevelPercent: null,
                   connectionMode: 'Cloud',
                 );
 
@@ -3129,7 +3133,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   macAddress: 'CC:50:E3:42:${DateTime.now().second.toString().padLeft(2, '0')}:9A',
                   lastSeen: DateTime.now(),
                   localIP: '192.168.4.1',
-                  foodLevelPercent: 100,
+                  foodLevelPercent: null,
                   connectionMode: 'Local',
                 );
 

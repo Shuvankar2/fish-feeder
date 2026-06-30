@@ -47,7 +47,7 @@ class AdminDeviceModel {
   int feedsToday;
   int failedFeeds;
   final String location;
-  int foodLevelPercent;
+  int? foodLevelPercent;
   DateTime lastSeen;
   List<DeviceMemberModel> members;
 
@@ -62,7 +62,7 @@ class AdminDeviceModel {
     required this.feedsToday,
     required this.failedFeeds,
     required this.location,
-    required this.foodLevelPercent,
+    this.foodLevelPercent,
     required this.lastSeen,
     required this.members,
   });

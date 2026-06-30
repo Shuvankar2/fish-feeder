@@ -161,7 +161,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                 feedsToday: d['feeds_today'] ?? 0,
                 failedFeeds: d['failed_feeds'] ?? 0,
                 location: d['assigned_tenant'] ?? 'Unassigned',
-                foodLevelPercent: 85,
+                foodLevelPercent: null,
                 lastSeen: DateTime.tryParse(d['last_seen'] ?? '') ?? DateTime.now(),
                 members: [],
               );
@@ -1106,21 +1106,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
-                      value: device.foodLevelPercent / 100,
+                      value: device.foodLevelPercent != null ? device.foodLevelPercent! / 100 : 0.0,
                       backgroundColor: Colors.white12,
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        device.foodLevelPercent > 50
-                            ? const Color(0xFF00FF87)
-                            : device.foodLevelPercent > 20
-                                ? const Color(0xFFFFD700)
-                                : Colors.redAccent,
+                        device.foodLevelPercent == null
+                            ? Colors.white24
+                            : device.foodLevelPercent! > 50
+                                ? const Color(0xFF00FF87)
+                                : device.foodLevelPercent! > 20
+                                    ? const Color(0xFFFFD700)
+                                    : Colors.redAccent,
                       ),
                       minHeight: 4,
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
-                Text('${device.foodLevelPercent}%',
+                Text(device.foodLevelPercent != null ? '${device.foodLevelPercent}%' : 'NA',
                     style: GoogleFonts.outfit(color: Colors.white38, fontSize: 10)),
               ]),
             ]),
@@ -2207,8 +2209,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           _diagRow('Status',
               device.isOnline ? 'Online âœ“' : 'Offline âœ—',
               device.isOnline ? const Color(0xFF00FF87) : Colors.redAccent),
-          _diagRow('Food Level', '${device.foodLevelPercent}%',
-              device.foodLevelPercent > 20 ? const Color(0xFF00FF87) : Colors.redAccent),
+          _diagRow('Food Level', device.foodLevelPercent != null ? '${device.foodLevelPercent}%' : 'NA',
+              device.foodLevelPercent == null ? Colors.white54 : (device.foodLevelPercent! > 20 ? const Color(0xFF00FF87) : Colors.redAccent)),
           _diagRow('Firmware', device.firmware, Colors.purpleAccent),
           _diagRow('MAC Address', device.macAddress, Colors.white54),
           _diagRow('Serial', device.serialNumber, Colors.white54),
