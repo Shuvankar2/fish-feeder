@@ -95,13 +95,15 @@ class FirmwareModel {
   final DateTime releaseDate;
   final String changelog;
   final String sizeKB;
-  final bool isLatest;
+  final String tag;
+  final DateTime? deleteRequestedAt;
 
   FirmwareModel({
     required this.version,
     required this.releaseDate,
     required this.changelog,
     required this.sizeKB,
-    required this.isLatest,
+    required this.tag,
+    this.deleteRequestedAt,
   });
 }

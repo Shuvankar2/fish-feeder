@@ -126,21 +126,35 @@ class AdminService {
     return ApiService.get('/admin/firmwares');
   }
 
-  /// Create a new Firmware version
   static Future<Map<String, dynamic>> createFirmware({
     required String version,
     required String changelog,
     required String espCode,
     int sizeKb = 0,
-    bool isLatest = false,
+    String tag = 'stable',
   }) {
     return ApiService.post('/admin/firmwares', {
       'version': version,
       'changelog': changelog,
       'esp_code': espCode,
       'size_kb': sizeKb,
-      'is_latest': isLatest,
+      'tag': tag,
     });
+  }
+
+  /// Update a Firmware version (changelog, espCode, tag)
+  static Future<Map<String, dynamic>> updateFirmware(String version, Map<String, dynamic> data) {
+    return ApiService.put('/admin/firmwares/$version', data);
+  }
+
+  /// Request deletion of a Firmware
+  static Future<Map<String, dynamic>> requestDeleteFirmware(String version) {
+    return ApiService.post('/admin/firmwares/$version/delete-request', {});
+  }
+
+  /// Revoke deletion of a Firmware
+  static Future<Map<String, dynamic>> revokeDeleteFirmware(String version) {
+    return ApiService.post('/admin/firmwares/$version/revoke-delete', {});
   }
 
   /// Delete a Firmware version

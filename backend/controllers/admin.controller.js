@@ -325,38 +325,95 @@ const listFirmwares = async (req, res) => {
 
 const createFirmware = async (req, res) => {
   try {
-    const { version, changelog, esp_code, size_kb, is_latest } = req.body;
+    const { version, changelog, esp_code, size_kb, tag } = req.body;
     if (!version || !changelog || !esp_code)
       return res.status(400).json({ success: false, message: "version, changelog, and esp_code are required" });
 
     const existing = await Firmware.findOne({ version });
     if (existing) return res.status(409).json({ success: false, message: "Firmware version already exists" });
 
-    if (is_latest) {
-      await Firmware.updateMany({ is_latest: true }, { is_latest: false });
-    }
-
     const firmware = await Firmware.create({
       version,
       changelog,
       esp_code,
       size_kb: size_kb || 0,
-      is_latest: is_latest || false
+      tag: tag || 'stable'
     });
 
-    await logAction(req.user.uid, "create_firmware", "system", version, { size_kb, is_latest }, req.ip);
+    await logAction(req.user.uid, "create_firmware", "system", version, { size_kb, tag }, req.ip);
     res.status(201).json({ success: true, firmware });
   } catch (err) {
     res.status(500).json({ success: false, message: "Firmware creation failed" });
   }
 };
 
+const updateFirmware = async (req, res) => {
+  try {
+    const { version } = req.params;
+    const { changelog, esp_code, tag } = req.body;
+
+    const firmware = await Firmware.findOne({ version });
+    if (!firmware) return res.status(404).json({ success: false, message: "Firmware not found" });
+
+    if (changelog !== undefined) firmware.changelog = changelog;
+    if (esp_code !== undefined) firmware.esp_code = esp_code;
+    if (tag !== undefined) firmware.tag = tag;
+
+    await firmware.save();
+    await logAction(req.user.uid, "update_firmware", "system", version, { changelog, tag }, req.ip);
+    res.json({ success: true, firmware });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Firmware update failed" });
+  }
+};
+
+const requestDeleteFirmware = async (req, res) => {
+  try {
+    const { version } = req.params;
+    const fw = await Firmware.findOne({ version });
+    if (!fw) return res.status(404).json({ success: false, message: "Firmware not found" });
+
+    fw.delete_requested_at = new Date();
+    await fw.save();
+    
+    await logAction(req.user.uid, "request_delete_firmware", "system", version, {}, req.ip);
+    res.json({ success: true, message: "Firmware deletion requested. 1-day buffer initiated." });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Failed to request deletion" });
+  }
+};
+
+const revokeDeleteFirmware = async (req, res) => {
+  try {
+    const { version } = req.params;
+    await Firmware.updateOne({ version }, { delete_requested_at: null });
+    await logAction(req.user.uid, "revoke_delete_firmware", "system", version, {}, req.ip);
+    res.json({ success: true, message: "Firmware deletion request revoked." });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Failed to revoke deletion" });
+  }
+};
+
 const deleteFirmware = async (req, res) => {
   try {
     const { version } = req.params;
+    const fw = await Firmware.findOne({ version });
+    if (!fw) return res.status(404).json({ success: false, message: "Firmware not found" });
+
+    if (!fw.delete_requested_at) {
+      return res.status(400).json({ success: false, message: "Deletion must be requested first." });
+    }
+
+    const diffTime = Math.abs(new Date() - fw.delete_requested_at);
+    const diffDays = diffTime / (1000 * 60 * 60 * 24); 
+
+    if (diffDays < 1) {
+      return res.status(400).json({ success: false, message: "1-day buffer has not expired yet." });
+    }
+
     await Firmware.deleteOne({ version });
     await logAction(req.user.uid, "delete_firmware", "system", version, {}, req.ip);
-    res.json({ success: true, message: "Firmware deleted" });
+    res.json({ success: true, message: "Firmware permanently deleted" });
   } catch (err) {
     res.status(500).json({ success: false, message: "Delete failed" });
   }
@@ -364,5 +421,5 @@ const deleteFirmware = async (req, res) => {
 
 module.exports = {
   listTenants, createTenant, updateTenant, requestDeleteTenant, revokeDeleteTenant, deleteTenant,
-  listFirmwares, createFirmware, deleteFirmware,
+  listFirmwares, createFirmware, updateFirmware, deleteFirmware, requestDeleteFirmware, revokeDeleteFirmware,
   getStats, listUsers, updateUser, deleteUser, listAllDevices, createDevice, updateDeviceAdmin, deleteDevice, transferOwnership, getAdminLogs, getAllFeedLogs };

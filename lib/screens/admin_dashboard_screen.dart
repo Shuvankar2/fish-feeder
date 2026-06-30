@@ -44,37 +44,33 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   String _userSearch = '';
   final _userSearchController = TextEditingController();
 
-  // â”€â”€ Device Management filters â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Device Management filters ────────────────────────────
   String _deviceFilter = 'All';
   String _deviceSearch = '';
   final _deviceSearchController = TextEditingController();
 
-  // â”€â”€ Feed Log filters â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Feed Log filters ─────────────────────────────────────
   String _logDeviceFilter = 'All';
   String _logTypeFilter = 'All';
   String _logStatusFilter = 'All';
 
-  // â”€â”€ Firmware â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Firmware ─────────────────────────────────────────────
   bool _isUpdatingAll = false;
   double _otaProgress = 0.0;
 
-  // â”€â”€ System Settings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  final _mqttController =
-      TextEditingController(text: 'mqtt://broker.aquaglass.io:1883');
-  final _mongoController = TextEditingController(
-      text: 'mongodb+srv://admin:***@cluster.mongodb.net/aquaglass');
+  // ── System Settings ──────────────────────────────────────
   bool _emailNotifs = true;
   bool _pushNotifs = true;
   bool _lowFoodAlerts = true;
   bool _deviceOfflineAlerts = true;
 
-  // â”€â”€ Animation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Animation ────────────────────────────────────────────
   late AnimationController _statsAnim;
   late Animation<double> _statsFade;
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═════════════════════════════════════════════════════════
   //  INIT
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═════════════════════════════════════════════════════════
 
   bool _isLoadingData = false;
 
@@ -206,9 +202,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                 releaseDate: DateTime.tryParse(f['created_at'] ?? '') ?? DateTime.now(),
                 changelog: f['changelog'] ?? '',
                 sizeKB: (f['size_kb'] ?? 0).toString(),
-                isLatest: f['is_latest'] == true,
+                tag: f['tag'] ?? 'test',
+                deleteRequestedAt: f['delete_requested_at'] != null ? DateTime.tryParse(f['delete_requested_at']) : null,
               );
             }).toList();
+            // Sort semantically so the highest version is first
+            _firmwares.sort((a, b) => b.version.compareTo(a.version));
           }
         });
       }
@@ -227,44 +226,41 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           changelog:
               '• Fixed auto-feed timer drift\n• Improved MQTT reconnect stability\n• Added food level calibration mode\n• Memory leak fix in WiFi handler',
           sizeKB: '248',
-          isLatest: true),
+          tag: 'stable'),
       FirmwareModel(
           version: 'v1.0.3',
           releaseDate: DateTime(2026, 3, 2),
           changelog:
               '• Vacation mode implemented\n• Multi-schedule support (up to 10/day)\n• OTA over Cloud added',
           sizeKB: '231',
-          isLatest: false),
+          tag: 'test'),
       FirmwareModel(
           version: 'v1.0.2',
           releaseDate: DateTime(2026, 1, 20),
           changelog:
               '• Initial cloud connect support\n• Manual feed button fix\n• Low food alert threshold configurable',
           sizeKB: '198',
-          isLatest: false),
+          tag: 'stable'),
       FirmwareModel(
           version: 'v1.0.1',
           releaseDate: DateTime(2025, 11, 5),
           changelog:
               '• Base release\n• Local WiFi control\n• Basic schedule (3/day)',
           sizeKB: '172',
-          isLatest: false),
+          tag: 'stable'),
     ];
   }
-
   @override
   void dispose() {
     _statsAnim.dispose();
     _userSearchController.dispose();
     _deviceSearchController.dispose();
-    _mqttController.dispose();
-    _mongoController.dispose();
     super.dispose();
   }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═════════════════════════════════════════════════════════
   //  HELPERS
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═════════════════════════════════════════════════════════
 
   void _showSnackBar(String msg, {bool isError = false}) {
     if (!mounted) return;
@@ -1672,48 +1668,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         ),
         const SizedBox(height: 16),
 
-        // Per-device OTA
-        _glassCard(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Target Specific Devices',
-                style: GoogleFonts.outfit(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15)),
-            const SizedBox(height: 12),
-            ..._devices.map((d) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Row(children: [
-                    Icon(Icons.router_rounded,
-                        color: d.isOnline
-                            ? const Color(0xFF00FF87)
-                            : Colors.redAccent,
-                        size: 18),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(d.name,
-                                style: GoogleFonts.outfit(
-                                    color: Colors.white70, fontSize: 12)),
-                            Text(d.firmware,
-                                style: GoogleFonts.outfit(
-                                    color: Colors.white38, fontSize: 10)),
-                          ]),
-                    ),
-                    d.firmware == _firmwares[0].version
-                        ? _pill('Up to date', const Color(0xFF00FF87))
-                        : GestureDetector(
-                            onTap: () => _showOtaDialog(d),
-                            child: _pill('Update', Colors.purpleAccent),
-                          ),
-                  ]),
-                )),
-          ]),
-        ),
-        const SizedBox(height: 16),
-
         // Firmware history
         Text('Release History',
             style: GoogleFonts.outfit(
@@ -1741,31 +1695,70 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                       '${fw.releaseDate.day}/${fw.releaseDate.month}/${fw.releaseDate.year}',
                       style:
                           GoogleFonts.outfit(color: Colors.white38, fontSize: 11)),
-                  if (fw.isLatest) ...[
+                  if (fw.version == _firmwares[0].version) ...[
                     const SizedBox(width: 8),
                     _pill('LATEST', const Color(0xFF00FF87)),
                   ],
+                  const SizedBox(width: 8),
+                  _pill(fw.tag.toUpperCase(), fw.tag == 'stable' ? Colors.blueAccent : Colors.orangeAccent),
                   const Spacer(),
                   Text('${fw.sizeKB} KB',
                       style:
                           GoogleFonts.outfit(color: Colors.white38, fontSize: 11)),
                   const SizedBox(width: 12),
                   GestureDetector(
-                    onTap: () async {
-                      try {
-                        final res = await AdminService.deleteFirmware(fw.version);
-                        if (res['success'] == true) {
-                          _showSnackBar('Release version ${fw.version} deleted successfully');
-                          _loadData();
-                        } else {
-                          _showSnackBar(res['message'] ?? 'Delete failed', isError: true);
-                        }
-                      } catch (_) {
-                        _showSnackBar('Connection failed', isError: true);
-                      }
-                    },
-                    child: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 18),
+                    onTap: () => _showEditFirmwareDialog(fw),
+                    child: const Icon(Icons.edit_rounded, color: Colors.white54, size: 18),
                   ),
+                  const SizedBox(width: 12),
+                  if (fw.deleteRequestedAt != null) ...[
+                    Builder(builder: (ctx) {
+                      final diff = DateTime.now().difference(fw.deleteRequestedAt!);
+                      final hoursLeft = 24 - diff.inHours;
+                      if (hoursLeft <= 0) {
+                        return GestureDetector(
+                          onTap: () async {
+                            try {
+                              final res = await AdminService.deleteFirmware(fw.version);
+                              if (res['success'] == true) {
+                                _showSnackBar('Release version ${fw.version} permanently deleted');
+                                _loadData();
+                              } else {
+                                _showSnackBar(res['message'] ?? 'Delete failed', isError: true);
+                              }
+                            } catch (_) { _showSnackBar('Connection failed', isError: true); }
+                          },
+                          child: _pill('PERM DELETE', Colors.redAccent),
+                        );
+                      }
+                      return Row(children: [
+                        _pill('${hoursLeft}h left', Colors.redAccent),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () async {
+                            await AdminService.revokeDeleteFirmware(fw.version);
+                            _loadData();
+                          },
+                          child: _pill('Revoke', Colors.orangeAccent),
+                        )
+                      ]);
+                    }),
+                  ] else ...[
+                    GestureDetector(
+                      onTap: () async {
+                        try {
+                          final res = await AdminService.requestDeleteFirmware(fw.version);
+                          if (res['success'] == true) {
+                            _showSnackBar('Deletion requested for ${fw.version}');
+                            _loadData();
+                          } else {
+                            _showSnackBar(res['message'] ?? 'Request failed', isError: true);
+                          }
+                        } catch (_) { _showSnackBar('Connection failed', isError: true); }
+                      },
+                      child: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 18),
+                    ),
+                  ],
                 ]),
                 const SizedBox(height: 8),
                 Text(fw.changelog,
@@ -1784,10 +1777,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                     fontWeight: FontWeight.bold,
                     fontSize: 15)),
             const SizedBox(height: 14),
-            _settingsField('MQTT Broker URL', _mqttController, Icons.cloud_rounded),
-            const SizedBox(height: 10),
-            _settingsField('MongoDB URI', _mongoController, Icons.storage_rounded),
-            const SizedBox(height: 16),
             Text('Notification Preferences',
                 style: GoogleFonts.outfit(color: Colors.white54, fontSize: 12)),
             const SizedBox(height: 8),
@@ -2578,7 +2567,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     final versionCtrl = TextEditingController();
     final changelogCtrl = TextEditingController();
     final espCodeCtrl = TextEditingController();
-    bool isLatest = true;
+    String selectedTag = 'stable';
 
     showDialog(
       context: context,
@@ -2618,12 +2607,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                 const SizedBox(height: 10),
                 Row(
                   children: [
-                    Checkbox(
-                      value: isLatest,
-                      activeColor: const Color(0xFF00FF87),
-                      onChanged: (val) => set(() => isLatest = val ?? false),
+                    Text('Release Tag:', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13)),
+                    const SizedBox(width: 16),
+                    ChoiceChip(
+                      label: const Text('Stable'),
+                      selected: selectedTag == 'stable',
+                      selectedColor: const Color(0xFF00FF87).withOpacity(0.2),
+                      onSelected: (val) { if (val) set(() => selectedTag = 'stable'); },
                     ),
-                    Text('Set as LATEST release', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 12)),
+                    const SizedBox(width: 8),
+                    ChoiceChip(
+                      label: const Text('Test'),
+                      selected: selectedTag == 'test',
+                      selectedColor: Colors.orangeAccent.withOpacity(0.2),
+                      onSelected: (val) { if (val) set(() => selectedTag = 'test'); },
+                    ),
                   ],
                 ),
               ],
@@ -2650,7 +2648,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                     changelog: changelog,
                     espCode: espCode,
                     sizeKb: sizeKb,
-                    isLatest: isLatest,
+                    tag: selectedTag,
                   );
                   if (res['success'] == true) {
                     _showSnackBar('Firmware ${version} added successfully! 🚀');
@@ -2674,6 +2672,113 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       ),
     );
   }
+
+  void _showEditFirmwareDialog(FirmwareModel fw) {
+    final changelogCtrl = TextEditingController(text: fw.changelog);
+    final espCodeCtrl = TextEditingController(text: '/* Code fetched from backend... */');
+    String selectedTag = fw.tag;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, set) => AlertDialog(
+          backgroundColor: const Color(0xFF0D2018),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text('Edit Firmware Release (${fw.version})',
+              style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: changelogCtrl,
+                  maxLines: 3,
+                  style: GoogleFonts.outfit(color: Colors.white, fontSize: 13),
+                  decoration: InputDecoration(
+                    labelText: 'Changelog Description',
+                    labelStyle: GoogleFonts.outfit(color: Colors.white70),
+                    enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: espCodeCtrl,
+                  maxLines: 8,
+                  style: const TextStyle(color: Colors.greenAccent, fontSize: 12, fontFamily: 'monospace'),
+                  decoration: InputDecoration(
+                    labelText: 'ESP32 Code Snippet',
+                    labelStyle: GoogleFonts.outfit(color: Colors.white70),
+                    enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Text('Release Tag:', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13)),
+                    const SizedBox(width: 16),
+                    ChoiceChip(
+                      label: const Text('Stable'),
+                      selected: selectedTag == 'stable',
+                      selectedColor: const Color(0xFF00FF87).withOpacity(0.2),
+                      onSelected: (val) { if (val) set(() => selectedTag = 'stable'); },
+                    ),
+                    const SizedBox(width: 8),
+                    ChoiceChip(
+                      label: const Text('Test'),
+                      selected: selectedTag == 'test',
+                      selectedColor: Colors.orangeAccent.withOpacity(0.2),
+                      onSelected: (val) { if (val) set(() => selectedTag = 'test'); },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text('Cancel', style: GoogleFonts.outfit(color: Colors.white38))),
+            ElevatedButton(
+              onPressed: () async {
+                final changelog = changelogCtrl.text.trim();
+                final espCode = espCodeCtrl.text.trim();
+                if (changelog.isEmpty || espCode.isEmpty) {
+                  _showSnackBar('All fields are required', isError: true);
+                  return;
+                }
+                Navigator.pop(ctx);
+                try {
+                  final res = await AdminService.updateFirmware(
+                    fw.version,
+                    {
+                      'changelog': changelog,
+                      'esp_code': espCode,
+                      'tag': selectedTag,
+                    }
+                  );
+                  if (res['success'] == true) {
+                    _showSnackBar('Firmware ${fw.version} updated successfully! 🚀');
+                    _loadData();
+                  } else {
+                    _showSnackBar(res['message'] ?? 'Failed to update firmware', isError: true);
+                  }
+                } catch (_) {
+                  _showSnackBar('Connection failed', isError: true);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00FF87),
+                foregroundColor: Colors.black,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Text('Save Changes', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
 
   void _showProvisionDeviceDialog() {
     int currentStep = 1;

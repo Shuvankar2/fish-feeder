@@ -28,6 +28,9 @@ router.delete("/tenants/:name",        ...guard, c.deleteTenant);
 // Firmware routes
 router.get("/firmwares",               ...guard, c.listFirmwares);
 router.post("/firmwares",              ...guard, c.createFirmware);
+router.put("/firmwares/:version",      ...guard, c.updateFirmware);
+router.post("/firmwares/:version/delete-request", ...guard, c.requestDeleteFirmware);
+router.post("/firmwares/:version/revoke-delete", ...guard, c.revokeDeleteFirmware);
 router.delete("/firmwares/:version",   ...guard, c.deleteFirmware);
 
 module.exports = router;
