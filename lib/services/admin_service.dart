@@ -99,7 +99,17 @@ class AdminService {
     });
   }
 
-  /// Delete a Tenant
+  /// Request deletion of a Tenant (initiates 3-day buffer)
+  static Future<Map<String, dynamic>> requestDeleteTenant(String name) {
+    return ApiService.post('/admin/tenants/$name/delete-request');
+  }
+
+  /// Revoke deletion of a Tenant
+  static Future<Map<String, dynamic>> revokeDeleteTenant(String name) {
+    return ApiService.post('/admin/tenants/$name/revoke-delete');
+  }
+
+  /// Delete a Tenant (permanent, after buffer)
   static Future<Map<String, dynamic>> deleteTenant(String name) {
     return ApiService.delete('/admin/tenants/$name');
   }

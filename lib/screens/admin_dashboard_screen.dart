@@ -149,10 +149,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               final deviceId = d['device_id'] ?? 0;
               final isOnline = d['status'] == 'online' || d['status'] == 'provisioned';
               final owner = d['owner_uid'] != null ? 'Registered Owner' : 'Unassigned';
+              final status = d['status'] ?? 'unprovisioned';
 
               return AdminDeviceModel(
                 id: deviceId.toString(),
-                name: d['notes'] ?? 'AquaGlass Feeder',
+                name: d['name'] ?? d['notes'] ?? 'AquaGlass Feeder',
                 serialNumber: serial,
                 macAddress: d['ip_address'] ?? '00:00:00:00:00:00',
                 firmware: d['firmware_version'] ?? 'v1.0.0',
@@ -163,6 +164,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                 location: d['assigned_tenant'] ?? 'Unassigned',
                 foodLevelPercent: null,
                 lastSeen: DateTime.tryParse(d['last_seen'] ?? '') ?? DateTime.now(),
+                status: status,
                 members: [],
               );
             }).toList();
@@ -378,6 +380,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                   color: Colors.redAccent,
                   shape: BoxShape.circle,
                 ),
+              ),
+            ),
+          ],
+        ),
+        PopupMenuButton<String>(
+          icon: const Icon(Icons.manage_accounts_outlined, color: Colors.white54),
+          color: const Color(0xFF05120E),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: Colors.white.withOpacity(0.1)),
+          ),
+          onSelected: (val) {
+            if (val == 'account') {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
+            }
+          },
+          itemBuilder: (context) => [
+            PopupMenuItem(
+              value: 'account',
+              child: Row(
+                children: [
+                  const Icon(Icons.person_rounded, color: Color(0xFF00FF87), size: 18),
+                  const SizedBox(width: 10),
+                  Text('My Account', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+                ],
               ),
             ),
           ],
@@ -910,11 +937,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               ? Center(child: Text('No tenants found', style: GoogleFonts.outfit(color: Colors.white38)))
               : GridView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 260,
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
-                    childAspectRatio: 1.3,
+                    childAspectRatio: 1.4,
                   ),
                   itemCount: filteredTenants.length,
                   itemBuilder: (_, idx) {
@@ -946,12 +973,27 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                     GestureDetector(
                                       onTap: () async {
                                         try {
-                                          final res = await AdminService.deleteTenant(t['name']);
+                                          final res = await AdminService.requestDeleteTenant(t['name']);
                                           if (res['success'] == true) {
-                                            _showSnackBar('Tenant ${t['display_name']} deleted.');
+                                            _showSnackBar(res['message'] ?? 'Deletion requested for ${t['display_name']}');
                                             _loadData();
                                           } else {
-                                            _showSnackBar(res['message'] ?? 'Failed to delete tenant', isError: true);
+                                            if (mounted) {
+                                              showDialog(
+                                                context: context,
+                                                builder: (context) => AlertDialog(
+                                                  backgroundColor: const Color(0xFF071A0F),
+                                                  title: Text('Cannot Delete Tenant', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+                                                  content: Text(res['message'] ?? 'Failed to delete tenant', style: GoogleFonts.outfit(color: Colors.white70)),
+                                                  actions: [
+                                                    TextButton(
+                                                      onPressed: () => Navigator.pop(context),
+                                                      child: Text('OK', style: GoogleFonts.outfit(color: const Color(0xFF00FF87))),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            }
                                           }
                                         } catch (_) {
                                           _showSnackBar('Connection failed', isError: true);
@@ -1203,12 +1245,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           _deviceActionBtn('Transfer', Icons.swap_horiz_rounded, Colors.orange,
               () => _showTransferOwnershipDialog(device)),
           const SizedBox(width: 8),
-          _deviceActionBtn('Unbind', Icons.link_off_rounded, Colors.redAccent, () async {
+          _deviceActionBtn('Suspend', Icons.block_rounded, Colors.redAccent, () async {
             try {
               final res = await AdminService.deleteDevice(int.parse(device.id));
               if (res['success'] == true) {
                 setState(() => _devices.remove(device));
-                _showSnackBar('${device.name} unbound successfully', isError: true);
+                _showSnackBar('${device.name} suspended successfully', isError: true);
               } else {
                 _showSnackBar(res['message'] ?? 'Failed to delete device', isError: true);
               }
@@ -2481,6 +2523,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     bool isFlashingSuccess = false;
     bool isRegistering = false;
 
+    bool deviceAlreadyProvisioned = false;
+    AdminDeviceModel? existingDevice;
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -2537,6 +2582,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                     const SizedBox(height: 8),
                     Text('MAC: $macAddress\nSerial: $autoSerial\nSecret: $autoSecret',
                         style: const TextStyle(color: Colors.white70, fontSize: 11, fontFamily: 'monospace')),
+                    if (deviceAlreadyProvisioned) ...[
+                      const SizedBox(height: 12),
+                      Text('Device is already provisioned.',
+                          style: GoogleFonts.outfit(color: Colors.orangeAccent, fontSize: 12, fontWeight: FontWeight.bold)),
+                    ]
                   ] else ...[
                     ElevatedButton.icon(
                       onPressed: () async {
@@ -2569,6 +2619,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                             macAddress = fetchedMac!;
                             autoSerial = fetchedSerial!;
                             autoSecret = secret;
+
+                            try {
+                              existingDevice = _devices.firstWhere((d) => d.serialNumber == autoSerial);
+                              if (existingDevice!.status == 'provisioned' || existingDevice!.status == 'online' || existingDevice!.status == 'suspended') {
+                                deviceAlreadyProvisioned = true;
+                              } else {
+                                deviceAlreadyProvisioned = false;
+                              }
+                            } catch(e) {
+                              existingDevice = null;
+                              deviceAlreadyProvisioned = false;
+                            }
                           });
                         } catch (e) {
                           if (context.mounted) {
@@ -2602,12 +2664,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                     onPressed: () => Navigator.pop(ctx),
                     child: Text('Cancel', style: GoogleFonts.outfit(color: Colors.white38))),
                 ElevatedButton(
-                  onPressed: macAddress.isEmpty ? null : () => set(() => currentStep = 2),
+                  onPressed: macAddress.isEmpty ? null : () => set(() {
+                    if (deviceAlreadyProvisioned) {
+                      currentStep = 5; // Manage parameters step
+                    } else {
+                      currentStep = 2;
+                    }
+                  }),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00FF87),
                     foregroundColor: Colors.black,
                   ),
-                  child: Text('Next', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                  child: Text(deviceAlreadyProvisioned ? 'Manage Parameters' : 'Next', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
                 ),
               ],
             );
@@ -2625,26 +2693,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                 children: [
                   _dialogField(nameCtrl, 'Device Name (e.g. Main Fish Tank)', Icons.label_rounded),
                   const SizedBox(height: 16),
-                  // Tenant selector dropdown
-                  DropdownButtonFormField<String>(
-                    value: selectedTenantCode,
-                    dropdownColor: const Color(0xFF0D2018),
-                    style: GoogleFonts.outfit(color: Colors.white, fontSize: 13),
-                    decoration: InputDecoration(
-                      labelText: 'Assigned Tenant',
-                      labelStyle: GoogleFonts.outfit(color: Colors.white70),
-                      enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Colors.white12)),
-                    ),
-                    items: _tenants.map((t) =>
-                      DropdownMenuItem(
-                        value: t['name'] as String,
-                        child: Text(t['display_name'] as String),
+                  if (_selectedTenant != null) ...[
+                    Text('Provisioning under Tenant: ${_selectedTenant!['display_name']}',
+                        style: GoogleFonts.outfit(color: const Color(0xFF00FF87), fontSize: 13)),
+                  ] else ...[
+                    // Tenant selector dropdown
+                    DropdownButtonFormField<String>(
+                      value: selectedTenantCode,
+                      dropdownColor: const Color(0xFF0D2018),
+                      style: GoogleFonts.outfit(color: Colors.white, fontSize: 13),
+                      decoration: InputDecoration(
+                        labelText: 'Assigned Tenant',
+                        labelStyle: GoogleFonts.outfit(color: Colors.white70),
+                        enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Colors.white12)),
                       ),
-                    ).toList(),
-                    onChanged: (val) => set(() => selectedTenantCode = val),
-                  ),
+                      items: _tenants.map((t) =>
+                        DropdownMenuItem(
+                          value: t['name'] as String,
+                          child: Text(t['display_name'] as String),
+                        ),
+                      ).toList(),
+                      onChanged: (val) => set(() => selectedTenantCode = val),
+                    ),
+                  ],
                 ],
               ),
               actions: [
@@ -2750,8 +2823,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           }
 
           // STEP 4: Render QR Code printable sticker & download
-          return AlertDialog(
-            backgroundColor: const Color(0xFF05120E),
+          if (currentStep == 4) {
+            return AlertDialog(
+              backgroundColor: const Color(0xFF05120E),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(24),
               side: BorderSide(color: const Color(0xFF00FF87).withOpacity(0.2)),
@@ -2848,6 +2922,64 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                     ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
                     : Text('Complete', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
               ),
+            ],
+          );
+          }
+
+          // STEP 5: Manage Parameters (for already provisioned devices)
+          return AlertDialog(
+            backgroundColor: const Color(0xFF0D2018),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            title: Text('Manage Parameters',
+                style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Device: ${existingDevice?.name ?? autoSerial}', style: GoogleFonts.outfit(color: Colors.white)),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.04),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white12),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Wi-Fi SSID', style: GoogleFonts.outfit(color: Colors.white70)),
+                          Text('AquaHomeNet', style: GoogleFonts.outfit(color: Colors.white)),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Feed Interval', style: GoogleFonts.outfit(color: Colors.white70)),
+                          Text('12 hours', style: GoogleFonts.outfit(color: Colors.white)),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Portion Size', style: GoogleFonts.outfit(color: Colors.white70)),
+                          Text('5 grams', style: GoogleFonts.outfit(color: Colors.white)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text('Real-time parameters synchronized successfully.', style: GoogleFonts.outfit(color: const Color(0xFF00FF87), fontSize: 12)),
+              ],
+            ),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text('Close', style: GoogleFonts.outfit(color: const Color(0xFF00FF87), fontWeight: FontWeight.bold))),
             ],
           );
         },

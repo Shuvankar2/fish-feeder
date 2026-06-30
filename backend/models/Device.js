@@ -4,11 +4,12 @@ const deviceSchema = new mongoose.Schema({
   device_id:          { type: Number, required: true, unique: true },
   serial_number:      { type: String, required: true, unique: true },
   device_secret_hash: { type: String, required: true },
+  name:               { type: String, default: "New Device" },
   firmware_version:   { type: String, default: "v1.0.0" },
   assigned_tenant:    { type: String, default: null },
   status: {
     type: String,
-    enum: ["unprovisioned", "provisioned", "online", "offline"],
+    enum: ["unprovisioned", "provisioned", "online", "offline", "suspended"],
     default: "unprovisioned",
   },
   owner_uid:    { type: String, default: null },

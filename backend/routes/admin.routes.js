@@ -20,6 +20,8 @@ router.get("/feedlogs",                ...guard, c.getAllFeedLogs);
 // Tenant routes
 router.get("/tenants",                 ...guard, c.listTenants);
 router.post("/tenants",                ...guard, c.createTenant);
+router.post("/tenants/:name/delete-request", ...guard, c.requestDeleteTenant);
+router.post("/tenants/:name/revoke-delete", ...guard, c.revokeDeleteTenant);
 router.delete("/tenants/:name",        ...guard, c.deleteTenant);
 
 // Firmware routes

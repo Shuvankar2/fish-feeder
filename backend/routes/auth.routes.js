@@ -1,4 +1,4 @@
-﻿const router = require("express").Router();
+const router = require("express").Router();
 const c = require("../controllers/auth.controller");
 const { protect } = require("../middleware/auth");
 
@@ -10,5 +10,6 @@ router.post("/social-login",   c.socialLogin);
 router.post("/forgot-password",c.forgotPassword);
 router.post("/reset-password", c.resetPassword);
 router.get("/me",              protect, c.getMe);
+router.put("/me",              protect, c.updateMe);
 
 module.exports = router;

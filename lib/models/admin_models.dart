@@ -49,6 +49,7 @@ class AdminDeviceModel {
   final String location;
   int? foodLevelPercent;
   DateTime lastSeen;
+  String status;
   List<DeviceMemberModel> members;
 
   AdminDeviceModel({
@@ -64,6 +65,7 @@ class AdminDeviceModel {
     required this.location,
     this.foodLevelPercent,
     required this.lastSeen,
+    required this.status,
     required this.members,
   });
 }

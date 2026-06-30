@@ -191,4 +191,20 @@ const getMe = async (req, res) => {
   res.json({ success: true, user: req.user });
 };
 
-module.exports = { sendOtp, verifyOtp, register, login, socialLogin, forgotPassword, resetPassword, getMe };
+// PUT /api/auth/me
+const updateMe = async (req, res) => {
+  try {
+    const { name, password } = req.body;
+    const updates = { updated_at: new Date() };
+    if (name) updates.name = name;
+    if (password) {
+      updates.password_hash = await bcrypt.hash(password, 12);
+    }
+    const user = await User.findOneAndUpdate({ uid: req.user.uid }, updates, { new: true, select: "-password_hash" });
+    res.json({ success: true, user });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Profile update failed" });
+  }
+};
+
+module.exports = { sendOtp, verifyOtp, register, login, socialLogin, forgotPassword, resetPassword, getMe, updateMe };

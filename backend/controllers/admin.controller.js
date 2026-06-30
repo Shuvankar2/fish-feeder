@@ -144,12 +144,11 @@ const updateDeviceAdmin = async (req, res) => {
 const deleteDevice = async (req, res) => {
   try {
     const device_id = Number(req.params.id);
-    await Device.deleteOne({ device_id });
-    await DeviceMember.deleteMany({ device_id });
-    await logAction(req.user.uid, "delete_device", "device", req.params.id, {}, req.ip);
-    res.json({ success: true, message: "Device deleted" });
+    await Device.updateOne({ device_id }, { status: "suspended" });
+    await logAction(req.user.uid, "suspend_device", "device", req.params.id, {}, req.ip);
+    res.json({ success: true, message: "Device suspended successfully" });
   } catch (err) {
-    res.status(500).json({ success: false, message: "Delete failed" });
+    res.status(500).json({ success: false, message: "Suspend failed" });
   }
 };
 
@@ -242,12 +241,57 @@ const createTenant = async (req, res) => {
   }
 };
 
+const requestDeleteTenant = async (req, res) => {
+  try {
+    const { name } = req.params;
+    const deviceCount = await Device.countDocuments({ assigned_tenant: name });
+    if (deviceCount > 0) {
+      return res.status(400).json({ success: false, message: "Cannot delete tenant. Please shift all devices to another tenant first." });
+    }
+    await Tenant.updateOne({ name }, { delete_requested_at: new Date() });
+    await logAction(req.user.uid, "request_delete_tenant", "system", name, {}, req.ip);
+    res.json({ success: true, message: "Tenant deletion requested. 3-day buffer initiated." });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Failed to request deletion" });
+  }
+};
+
+const revokeDeleteTenant = async (req, res) => {
+  try {
+    const { name } = req.params;
+    await Tenant.updateOne({ name }, { delete_requested_at: null });
+    await logAction(req.user.uid, "revoke_delete_tenant", "system", name, {}, req.ip);
+    res.json({ success: true, message: "Tenant deletion request revoked." });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Failed to revoke deletion" });
+  }
+};
+
 const deleteTenant = async (req, res) => {
   try {
     const { name } = req.params;
+    const tenant = await Tenant.findOne({ name });
+    if (!tenant) return res.status(404).json({ success: false, message: "Tenant not found" });
+
+    if (!tenant.delete_requested_at) {
+      return res.status(400).json({ success: false, message: "Deletion must be requested first." });
+    }
+
+    const diffTime = Math.abs(new Date() - tenant.delete_requested_at);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+
+    if (diffDays < 3) {
+      return res.status(400).json({ success: false, message: "3-day buffer has not expired yet." });
+    }
+
+    const deviceCount = await Device.countDocuments({ assigned_tenant: name });
+    if (deviceCount > 0) {
+      return res.status(400).json({ success: false, message: "Cannot delete tenant. Please shift all devices to another tenant first." });
+    }
+
     await Tenant.deleteOne({ name });
     await logAction(req.user.uid, "delete_tenant", "system", name, {}, req.ip);
-    res.json({ success: true, message: "Tenant deleted" });
+    res.json({ success: true, message: "Tenant permanently deleted." });
   } catch (err) {
     res.status(500).json({ success: false, message: "Delete failed" });
   }
@@ -303,6 +347,6 @@ const deleteFirmware = async (req, res) => {
 };
 
 module.exports = {
-  listTenants, createTenant, deleteTenant,
+  listTenants, createTenant, requestDeleteTenant, revokeDeleteTenant, deleteTenant,
   listFirmwares, createFirmware, deleteFirmware,
   getStats, listUsers, updateUser, deleteUser, listAllDevices, createDevice, updateDeviceAdmin, deleteDevice, transferOwnership, getAdminLogs, getAllFeedLogs };
