@@ -88,8 +88,19 @@ const listAllDevices = async (req, res) => {
         { assigned_tenant: { $regex: search, $options: "i" } },
       ]
     } : {};
-    const devices = await Device.find(filter).sort({ created_at: -1 }).skip((page-1)*limit).limit(limit);
+    
+    let devices = await Device.find(filter).sort({ created_at: -1 }).skip((page-1)*limit).limit(limit).lean();
     const total = await Device.countDocuments(filter);
+    
+    // Fetch owner emails
+    const ownerUids = devices.map(d => d.owner_uid).filter(uid => uid);
+    if (ownerUids.length > 0) {
+      const users = await User.find({ uid: { $in: ownerUids } }).select("uid email").lean();
+      const userMap = {};
+      users.forEach(u => userMap[u.uid] = u.email);
+      devices = devices.map(d => ({ ...d, owner_email: userMap[d.owner_uid] || "Registered Owner" }));
+    }
+
     res.json({ success: true, devices, total, page });
   } catch (err) {
     res.status(500).json({ success: false, message: "Failed to fetch devices" });

@@ -145,7 +145,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               final serial = d['serial_number'] ?? '';
               final deviceId = d['device_id'] ?? 0;
               final isOnline = d['status'] == 'online' || d['status'] == 'provisioned';
-              final owner = d['owner_uid'] != null ? 'Registered Owner' : 'Unassigned';
+              final owner = d['owner_email'] ?? (d['owner_uid'] != null ? 'Registered Owner' : 'Unassigned');
               final status = d['status'] ?? 'unprovisioned';
 
               return AdminDeviceModel(
@@ -3286,52 +3286,118 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
 
   void _showTransferOwnershipDialog(AdminDeviceModel device) {
     final emailCtrl = TextEditingController();
+    String status = 'idle'; // idle, checking, found, error
+    AdminUserModel? foundUser;
+    String errorMsg = '';
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF0D2018),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Transfer Ownership',
-            style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Enter email address of the new owner for device ' + device.serialNumber + ':',
-                style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13)),
-            const SizedBox(height: 14),
-            _dialogField(emailCtrl, 'New Owner Email', Icons.email_outlined),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, set) => AlertDialog(
+          backgroundColor: const Color(0xFF0D2018),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text('Transfer Ownership',
+              style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (status == 'idle' || status == 'error') ...[
+                Text('Enter email address of the new owner for device ' + device.serialNumber + ':',
+                    style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13)),
+                const SizedBox(height: 14),
+                _dialogField(emailCtrl, 'New Owner Email', Icons.email_outlined),
+                if (status == 'error') ...[
+                  const SizedBox(height: 8),
+                  Text(errorMsg, style: GoogleFonts.outfit(color: Colors.redAccent, fontSize: 12)),
+                ]
+              ] else if (status == 'checking') ...[
+                const Padding(
+                  padding: EdgeInsets.all(20),
+                  child: CircularProgressIndicator(color: Color(0xFF00FF87)),
+                ),
+                Text('Checking user details...', style: GoogleFonts.outfit(color: Colors.white70)),
+              ] else if (status == 'found' && foundUser != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF00FF87).withOpacity(0.3)),
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.check_circle, color: Color(0xFF00FF87), size: 32),
+                      const SizedBox(height: 8),
+                      Text('User Found', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      Text('Name: ${foundUser!.name}', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13)),
+                      Text('Email: ${foundUser!.email}', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13)),
+                      const SizedBox(height: 12),
+                      Text('Are you sure you want to transfer device ${device.serialNumber} to this user?',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.outfit(color: Colors.orangeAccent, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                )
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text('Cancel', style: GoogleFonts.outfit(color: Colors.white38))),
+            if (status == 'idle' || status == 'error')
+              ElevatedButton(
+                onPressed: () async {
+                  final email = emailCtrl.text.trim();
+                  if (email.isEmpty) return;
+                  set(() => status = 'checking');
+                  await Future.delayed(const Duration(milliseconds: 600)); // smooth UX
+                  
+                  try {
+                    foundUser = _users.firstWhere((u) => u.email.toLowerCase() == email.toLowerCase());
+                    set(() => status = 'found');
+                  } catch (_) {
+                    set(() {
+                      status = 'error';
+                      errorMsg = 'User not found in system. Please verify the email.';
+                    });
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF00FF87),
+                  foregroundColor: Colors.black,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: Text('Verify User', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+              ),
+            if (status == 'found')
+              ElevatedButton(
+                onPressed: () async {
+                  final email = emailCtrl.text.trim();
+                  Navigator.pop(ctx);
+                  try {
+                    final res = await AdminService.transferOwnership(int.parse(device.id), email);
+                    if (res['success'] == true) {
+                      _showSnackBar(res['message'] ?? 'Ownership transferred successfully!');
+                      _loadData();
+                    } else {
+                      _showSnackBar(res['message'] ?? 'Transfer failed', isError: true);
+                    }
+                  } catch (_) {
+                    _showSnackBar('Connection failed', isError: true);
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orangeAccent,
+                  foregroundColor: Colors.black,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: Text('Confirm Transfer', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+              ),
           ],
         ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text('Cancel', style: GoogleFonts.outfit(color: Colors.white38))),
-          ElevatedButton(
-            onPressed: () async {
-              final email = emailCtrl.text.trim();
-              if (email.isEmpty) return;
-              Navigator.pop(ctx);
-              
-              try {
-                final res = await AdminService.transferOwnership(int.parse(device.id), email);
-                if (res['success'] == true) {
-                  _showSnackBar(res['message'] ?? 'Ownership transferred successfully!');
-                  _loadData();
-                } else {
-                  _showSnackBar(res['message'] ?? 'Transfer failed', isError: true);
-                }
-              } catch (_) {
-                _showSnackBar('Connection failed', isError: true);
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF00FF87),
-              foregroundColor: Colors.black,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: Text('Transfer', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-          ),
-        ],
       ),
     );
   }
