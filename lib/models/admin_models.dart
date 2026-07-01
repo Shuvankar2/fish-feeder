@@ -97,6 +97,7 @@ class FirmwareModel {
   final String sizeKB;
   final String tag;
   final DateTime? deleteRequestedAt;
+  final String? binaryData;
 
   FirmwareModel({
     required this.version,
@@ -105,5 +106,6 @@ class FirmwareModel {
     required this.sizeKB,
     required this.tag,
     this.deleteRequestedAt,
+    this.binaryData,
   });
 }

@@ -336,9 +336,9 @@ const listFirmwares = async (req, res) => {
 
 const createFirmware = async (req, res) => {
   try {
-    const { version, changelog, esp_code, size_kb, tag } = req.body;
-    if (!version || !changelog || !esp_code)
-      return res.status(400).json({ success: false, message: "version, changelog, and esp_code are required" });
+    const { version, changelog, esp_code, binary_data, size_kb, tag } = req.body;
+    if (!version || !changelog)
+      return res.status(400).json({ success: false, message: "version and changelog are required" });
 
     const existing = await Firmware.findOne({ version });
     if (existing) return res.status(409).json({ success: false, message: "Firmware version already exists" });
@@ -347,6 +347,7 @@ const createFirmware = async (req, res) => {
       version,
       changelog,
       esp_code,
+      binary_data,
       size_kb: size_kb || 0,
       tag: tag || 'stable'
     });
@@ -361,13 +362,14 @@ const createFirmware = async (req, res) => {
 const updateFirmware = async (req, res) => {
   try {
     const { version } = req.params;
-    const { changelog, esp_code, tag } = req.body;
+    const { changelog, esp_code, binary_data, tag } = req.body;
 
     const firmware = await Firmware.findOne({ version });
     if (!firmware) return res.status(404).json({ success: false, message: "Firmware not found" });
 
     if (changelog !== undefined) firmware.changelog = changelog;
     if (esp_code !== undefined) firmware.esp_code = esp_code;
+    if (binary_data !== undefined) firmware.binary_data = binary_data;
     if (tag !== undefined) firmware.tag = tag;
 
     await firmware.save();

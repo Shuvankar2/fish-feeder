@@ -320,34 +320,15 @@ const seed = async () => {
 
     // Seed Firmwares
     console.log("\nSeeding Firmwares...");
+    await Firmware.deleteMany({}); // Remove all other versions
     const firmwaresToSeed = [
       {
-        version: "v1.0.4",
-        changelog: "• Fixed auto-feed timer drift\n• Improved MQTT reconnect stability\n• Added food level calibration mode\n• Memory leak fix in WiFi handler",
-        esp_code: "// AquaGlass Firmware v1.0.4\n#include <WiFi.h>\n#include <PubSubClient.h>\n\nvoid setup() {\n  Serial.begin(115200);\n  Serial.println(\"AquaGlass v1.0.4 Initializing...\");\n}\n\nvoid loop() {\n  // Monitor water and dispense feed\n}",
-        size_kb: 248,
-        is_latest: true
-      },
-      {
-        version: "v1.0.3",
-        changelog: "• Vacation mode implemented\n• Multi-schedule support (up to 10/day)\n• OTA over Cloud added",
-        esp_code: "// AquaGlass Firmware v1.0.3\nvoid setup() {\n  // v1.0.3 init\n}",
-        size_kb: 231,
-        is_latest: false
-      },
-      {
-        version: "v1.0.2",
-        changelog: "• Initial cloud connect support\n• Manual feed button fix\n• Low food alert threshold configurable",
-        esp_code: "// AquaGlass Firmware v1.0.2\nvoid setup() {\n  // v1.0.2 init\n}",
-        size_kb: 198,
-        is_latest: false
-      },
-      {
         version: "v1.0.1",
-        changelog: "• Base release\n• Local WiFi control\n• Basic schedule (3/day)",
-        esp_code: "// AquaGlass Firmware v1.0.1\nvoid setup() {\n  // v1.0.1 init\n}",
-        size_kb: 172,
-        is_latest: false
+        changelog: "• Implemented real device_info and set_secret handshake over Serial.",
+        esp_code: `#include <WiFi.h>\n#include <Preferences.h>\n#include <ArduinoJson.h>\n\nPreferences prefs;\nString serialBuffer = "";\n\nvoid setup() {\n  Serial.begin(115200);\n  delay(200);\n  while (Serial.available()) Serial.read();\n\n  WiFi.mode(WIFI_STA);\n  prefs.begin("aquaglass", false);\n}\n\nvoid loop() {\n  while (Serial.available()) {\n    char c = Serial.read();\n    serialBuffer += c;\n    if (c == '\\n') {\n      handleSerialCommand(serialBuffer);\n      serialBuffer = "";\n    }\n  }\n}\n\nvoid handleSerialCommand(String line) {\n  line.trim();\n  if (line.length() == 0) return;\n\n  StaticJsonDocument<256> cmd;\n  if (deserializeJson(cmd, line)) return;\n\n  const char* command = cmd["command"];\n  if (!command) return;\n\n  if (strcmp(command, "device_info") == 0) {\n    sendDeviceInfo();\n  } else if (strcmp(command, "set_secret") == 0) {\n    const char* secret = cmd["secret"];\n    if (secret) {\n      prefs.putString("secret", secret);\n      Serial.println("{\\"status\\":\\"ok\\",\\"action\\":\\"set_secret\\"}");\n    }\n  }\n}\n\nvoid sendDeviceInfo() {\n  StaticJsonDocument<256> resp;\n  String mac = WiFi.macAddress();\n  String serial = "AQGL-" + mac.substring(9);\n\n  resp["deviceId"] = serial;\n  resp["macAddress"] = mac;\n  resp["serialNumber"] = serial;\n\n  serializeJson(resp, Serial);\n  Serial.println();\n}`,
+        binary_data: "ZHVtbXlfYmluYXJ5X2RhdGE=", // base64 for 'dummy_binary_data'
+        size_kb: 450,
+        tag: "test"
       }
     ];
 

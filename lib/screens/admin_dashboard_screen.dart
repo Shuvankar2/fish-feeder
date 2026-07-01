@@ -204,6 +204,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                 sizeKB: (f['size_kb'] ?? 0).toString(),
                 tag: f['tag'] ?? 'test',
                 deleteRequestedAt: f['delete_requested_at'] != null ? DateTime.tryParse(f['delete_requested_at']) : null,
+                binaryData: f['binary_data'],
               );
             }).toList();
             // Sort semantically so the highest version is first
@@ -2950,8 +2951,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                           String? fetchedMac;
                           String? fetchedSerial;
                           
-                          // Wired Serial Connection Only
-                          final rawJson = await SerialService.getESPParameters();
+                          // Generate the real device secret for provisioning
+                          final secret = 'aq_sec_${math.Random().nextInt(100000)}';
+                          
+                          // Wired Serial Connection Only - pass secret to be set on device
+                          final rawJson = await SerialService.getESPParameters(secret);
                           final info = jsonDecode(rawJson);
                           fetchedMac = info['macAddress'];
                           fetchedSerial = info['serialNumber'];
@@ -2959,11 +2963,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                           if (fetchedMac == null || fetchedSerial == null) {
                             throw Exception('Incomplete device information received.');
                           }
-                          
-                          // The device secret is never exposed per spec,
-                          // we generate a placeholder for the UI to prevent null errors.
-                          // During claim flow, ESP authenticates directly.
-                          final secret = 'aq_sec_${math.Random().nextInt(100000)}';
 
                           set(() {
                             macAddress = fetchedMac!;
@@ -3125,14 +3124,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                     ElevatedButton.icon(
                       onPressed: () async {
                         set(() => isFlashing = true);
-                        for (int i = 1; i <= 10; i++) {
-                          await Future.delayed(const Duration(milliseconds: 200));
-                          set(() => flashProgress = i / 10.0);
+                        try {
+                           final fw = _firmwares.firstWhere((f) => f.version == selectedFirmwareVersion);
+                           if (fw.binaryData == null || fw.binaryData!.isEmpty) {
+                               throw Exception("No binary data available for this firmware version.");
+                           }
+                           
+                           await SerialService.flashFirmware(fw.binaryData!, (progress) {
+                              set(() => flashProgress = progress);
+                           });
+                           
+                           set(() {
+                              isFlashing = false;
+                              isFlashingSuccess = true;
+                           });
+                        } catch (e) {
+                           set(() {
+                              isFlashing = false;
+                              localError = e.toString().replaceFirst('Exception: ', '');
+                           });
                         }
-                        set(() {
-                          isFlashing = false;
-                          isFlashingSuccess = true;
-                        });
                       },
                       icon: const Icon(Icons.flash_on_rounded),
                       label: Text('Upload Firmware Code', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
