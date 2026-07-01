@@ -1137,8 +1137,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           child: Row(children: [
             Text('${filtered.length} devices',
                 style: GoogleFonts.outfit(color: Colors.white38, fontSize: 12)),
-            const Spacer(),
-            _addBtn('Provision Device', () => _showProvisionDeviceDialog()),
           ]),
         ),
         Expanded(
@@ -2842,7 +2840,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
 
   void _showProvisionDeviceDialog() {
     int currentStep = 1;
-    String connectionMode = 'Wi-Fi AP Mode'; // Wi-Fi or Wire
+    String connectionMode = 'Wired Serial COM'; // Wire only now
     bool isConnectingLocal = false;
     String macAddress = '';
     String autoSerial = '';
@@ -2875,38 +2873,36 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('Select communication connection method to read ESP32 device parameter information:',
+                  Text('Connect the ESP32 directly to this PC via USB cable.',
                       style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13)),
                   const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: ['Wi-Fi AP Mode', 'Wired Serial COM'].map((m) =>
-                      GestureDetector(
-                        onTap: () => set(() => connectionMode = m),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: connectionMode == m
-                                ? const Color(0xFF00FF87).withOpacity(0.15)
-                                : Colors.white.withOpacity(0.04),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                                color: connectionMode == m ? const Color(0xFF00FF87) : Colors.white12),
-                          ),
-                          child: Text(m,
-                              style: GoogleFonts.outfit(
-                                  color: connectionMode == m ? const Color(0xFF00FF87) : Colors.white54,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold)),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.03),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white12),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.computer_rounded, color: Colors.white54, size: 36),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Icon(Icons.usb_rounded, color: const Color(0xFF00FF87).withOpacity(0.8), size: 28),
                         ),
-                      ),
-                    ).toList(),
+                        const Icon(Icons.memory_rounded, color: Colors.white54, size: 36),
+                      ],
+                    ),
                   ),
+                  const SizedBox(height: 12),
+                  Text('Using Wired Serial COM',
+                      style: GoogleFonts.outfit(color: const Color(0xFF00FF87), fontSize: 12, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 24),
                   if (isConnectingLocal) ...[
                     const CircularProgressIndicator(color: Color(0xFF00FF87)),
                     const SizedBox(height: 12),
-                    Text('Connecting locally over ${connectionMode}...',
+                    Text('Connecting locally over USB COM port...',
                         style: GoogleFonts.outfit(color: const Color(0xFF00FF87), fontSize: 12)),
                   ] else if (macAddress.isNotEmpty) ...[
                     Icon(Icons.check_circle_rounded, color: const Color(0xFF00FF87), size: 40),
@@ -2929,16 +2925,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                           String? fetchedMac;
                           String? fetchedSerial;
                           
-                          if (connectionMode == 'Wi-Fi AP Mode') {
-                            final info = await EspWifiService.getDeviceInfo();
-                            fetchedMac = info['macAddress'];
-                            fetchedSerial = info['serialNumber'];
-                          } else {
-                            final rawJson = await SerialService.getESPParameters();
-                            final info = jsonDecode(rawJson);
-                            fetchedMac = info['macAddress'];
-                            fetchedSerial = info['serialNumber'];
-                          }
+                          // Wired Serial Connection Only
+                          final rawJson = await SerialService.getESPParameters();
+                          final info = jsonDecode(rawJson);
+                          fetchedMac = info['macAddress'];
+                          fetchedSerial = info['serialNumber'];
                           
                           if (fetchedMac == null || fetchedSerial == null) {
                             throw Exception('Incomplete device information received.');
@@ -2982,8 +2973,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                           });
                         }
                       },
-                      icon: const Icon(Icons.wifi_find_rounded),
-                      label: Text('Scan & Capture parameters', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                      icon: const Icon(Icons.usb_rounded),
+                      label: Text('Connect via COM Port', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF00FF87),
                         foregroundColor: Colors.black,
@@ -3027,31 +3018,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                 children: [
                   _dialogField(nameCtrl, 'Device Name (e.g. Main Fish Tank)', Icons.label_rounded),
                   const SizedBox(height: 16),
-                  if (_selectedTenant != null) ...[
-                    Text('Provisioning under Tenant: ${_selectedTenant!['display_name']}',
-                        style: GoogleFonts.outfit(color: const Color(0xFF00FF87), fontSize: 13)),
-                  ] else ...[
-                    // Tenant selector dropdown
-                    DropdownButtonFormField<String>(
-                      value: selectedTenantCode,
-                      dropdownColor: const Color(0xFF0D2018),
-                      style: GoogleFonts.outfit(color: Colors.white, fontSize: 13),
-                      decoration: InputDecoration(
-                        labelText: 'Assigned Tenant',
-                        labelStyle: GoogleFonts.outfit(color: Colors.white70),
-                        enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Colors.white12)),
-                      ),
-                      items: _tenants.map((t) =>
-                        DropdownMenuItem(
-                          value: t['name'] as String,
-                          child: Text(t['display_name'] as String),
-                        ),
-                      ).toList(),
-                      onChanged: (val) => set(() => selectedTenantCode = val),
+                  // Tenant selector dropdown (Mandatory for new devices)
+                  DropdownButtonFormField<String>(
+                    value: selectedTenantCode,
+                    dropdownColor: const Color(0xFF0D2018),
+                    style: GoogleFonts.outfit(color: Colors.white, fontSize: 13),
+                    decoration: InputDecoration(
+                      labelText: 'Assigned Tenant *',
+                      labelStyle: GoogleFonts.outfit(color: Colors.white70),
+                      enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Colors.white12)),
                     ),
-                  ],
+                    items: _tenants.map((t) =>
+                      DropdownMenuItem(
+                        value: t['name'] as String,
+                        child: Text(t['display_name'] as String),
+                      ),
+                    ).toList(),
+                    onChanged: (val) => set(() => selectedTenantCode = val),
+                  ),
                 ],
               ),
               actions: [
