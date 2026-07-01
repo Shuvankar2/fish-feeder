@@ -2845,6 +2845,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     String macAddress = '';
     String autoSerial = '';
     String autoSecret = '';
+    String? localError;
     
     final nameCtrl = TextEditingController();
     String? selectedTenantCode = _selectedTenant?['name'];
@@ -2899,6 +2900,27 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                   Text('Using Wired Serial COM',
                       style: GoogleFonts.outfit(color: const Color(0xFF00FF87), fontSize: 12, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 24),
+                  if (localError != null) ...[
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.redAccent.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 20),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(localError!, style: GoogleFonts.outfit(color: Colors.redAccent, fontSize: 12)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   if (isConnectingLocal) ...[
                     const CircularProgressIndicator(color: Color(0xFF00FF87)),
                     const SizedBox(height: 12),
@@ -2920,7 +2942,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                   ] else ...[
                     ElevatedButton.icon(
                       onPressed: () async {
-                        set(() => isConnectingLocal = true);
+                        set(() {
+                          isConnectingLocal = true;
+                          localError = null;
+                        });
                         try {
                           String? fetchedMac;
                           String? fetchedSerial;
@@ -2959,13 +2984,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                           });
                         } catch (e) {
                           if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(e.toString(), style: const TextStyle(color: Colors.white)), 
-                                backgroundColor: Colors.red.shade800,
-                                duration: const Duration(seconds: 5),
-                              ),
-                            );
+                            set(() => localError = e.toString().replaceFirst('Exception: ', ''));
                           }
                         } finally {
                           set(() {
