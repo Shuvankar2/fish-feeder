@@ -14,7 +14,7 @@ import '../services/download_helper.dart'
 import 'dart:ui' as ui;
 import 'dart:convert';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 
 
 class AdminDashboardScreen extends StatefulWidget {
