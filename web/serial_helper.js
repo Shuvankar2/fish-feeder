@@ -93,7 +93,7 @@ window.flashESPFirmware = async function(base64Data, updateProgressCallback) {
     await esploader.main();
     await esploader.flashId();
     
-    const fileArrayForEsptool = [{ data: binaryString, address: 0x0 }];
+    const fileArrayForEsptool = [{ data: binaryString, address: 0x10000 }];
     
     await esploader.writeFlash({
       fileArray: fileArrayForEsptool,
