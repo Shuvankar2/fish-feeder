@@ -23,7 +23,8 @@ window.readESPSerialParameters = async function() {
     baudrate: 115200,
     terminal: {
       clean: () => {},
-      writeLine: (data) => console.log(data)
+      writeLine: (data) => console.log(data),
+      write: (data) => console.log(data)
     }
   });
 
@@ -84,7 +85,8 @@ window.flashESPFirmware = async function(base64Data, updateProgressCallback) {
       baudrate: 115200,
       terminal: {
         clean: () => {},
-        writeLine: (data) => console.log(data)
+        writeLine: (data) => console.log(data),
+        write: (data) => console.log(data)
       }
     });
     
