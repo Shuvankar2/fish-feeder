@@ -195,3 +195,14 @@ window.writeESPSecret = async function(secretToSet) {
   }
   return "SUCCESS";
 };
+
+if (navigator.serial) {
+  navigator.serial.addEventListener('disconnect', (event) => {
+    if (window.selectedESPPort && event.target === window.selectedESPPort) {
+      window.selectedESPPort = null;
+      if (typeof window.onESPDeviceDisconnected === 'function') {
+        window.onESPDeviceDisconnected();
+      }
+    }
+  });
+}

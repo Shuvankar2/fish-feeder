@@ -2871,6 +2871,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, set) {
+          SerialService.registerDisconnectCallback(() {
+            if (ctx.mounted) {
+              set(() {
+                localError = "ESP32 device was physically disconnected from the USB port.";
+                macAddress = '';
+                autoSerial = '';
+                isConnectingLocal = false;
+                isFlashing = false;
+                currentStep = 1;
+              });
+            }
+          });
+          
           // STEP 1: Capture MAC locally
           if (currentStep == 1) {
             return AlertDialog(
@@ -3112,6 +3125,27 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                     onChanged: (val) => set(() => selectedFirmwareVersion = val),
                   ),
                   const SizedBox(height: 24),
+                  if (localError != null) ...[
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.redAccent.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 20),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(localError!, style: GoogleFonts.outfit(color: Colors.redAccent, fontSize: 12)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   if (isFlashing) ...[
                     LinearProgressIndicator(
                       value: flashProgress,

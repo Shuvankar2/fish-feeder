@@ -7,6 +7,8 @@ class SerialService {
     throw Exception('Writing secret is only supported in web browsers.');
   }
 
+  static void registerDisconnectCallback(void Function() callback) {}
+
   static Future<void> flashFirmware(String base64Data, Function(double) onProgress) async {
     throw Exception('Flashing firmware is only supported in web browsers.');
   }

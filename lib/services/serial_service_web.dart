@@ -27,6 +27,10 @@ class SerialService {
     }
   }
 
+  static void registerDisconnectCallback(void Function() callback) {
+    js_util.setProperty(js_util.globalThis, 'onESPDeviceDisconnected', js.allowInterop(callback));
+  }
+
   static Future<void> flashFirmware(String base64Data, Function(double) onProgress) async {
     try {
       final promise = js_util.callMethod(js_util.globalThis, 'flashESPFirmware', [
