@@ -28,7 +28,7 @@ window.readESPSerialParameters = async function() {
   });
 
   try {
-    await esploader.main_fn();
+    await esploader.main();
     const mac = await esploader.chip.readMac(esploader);
     if (!mac) {
       throw new Error("Could not read MAC address from the chip.");
@@ -88,12 +88,12 @@ window.flashESPFirmware = async function(base64Data, updateProgressCallback) {
       }
     });
     
-    await esploader.main_fn();
-    await esploader.flash_id();
+    await esploader.main();
+    await esploader.flashId();
     
     const fileArrayForEsptool = [{ data: binaryString, address: 0x0 }];
     
-    await esploader.write_flash({
+    await esploader.writeFlash({
       fileArray: fileArrayForEsptool,
       flashSize: "keep",
       flashMode: "keep",
