@@ -958,7 +958,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                   ),
                 ),
                 ElevatedButton(
-                  onPressed: () => _showProvisionDeviceDialog(),
+                  onPressed: () {
+                    if (kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.android)) {
+                      _showSnackBar('USB Provisioning is only supported on Desktop browsers.', isError: true);
+                      return;
+                    }
+                    _showProvisionDeviceDialog();
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00FF87),
                     foregroundColor: Colors.black,
