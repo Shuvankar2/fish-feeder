@@ -3139,7 +3139,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                            await SerialService.flashFirmware(fw.binaryData!, (progress) {
                               set(() => flashProgress = progress);
                            });
-                           
+
+                           await Future.delayed(const Duration(seconds: 4));
+                           await SerialService.writeSecret(autoSecret);
+
                            set(() {
                               isFlashing = false;
                               isFlashingSuccess = true;
