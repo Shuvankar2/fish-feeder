@@ -101,7 +101,7 @@ window.flashESPFirmware = async function(base64Data, updateProgressCallback) {
       flashMode: "keep",
       flashFreq: "keep",
       eraseAll: false,
-      compress: true,
+      compress: false,
       reportProgress: (fileIndex, written, total) => {
         if (updateProgressCallback) {
            updateProgressCallback(written / total);
